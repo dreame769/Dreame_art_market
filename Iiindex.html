@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DREAME | Professional Art Marketplace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Inter:wght@200;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #ffffff; --text: #000000; --gold: #AF964B; --grey: #fcfcfc; --border: #eeeeee; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+
+        /* --- SIDEBAR: ALL LINKS ACTIVATED --- */
+        .sidebar { position: fixed; left: -320px; top: 0; width: 320px; height: 100%; background: white; z-index: 5000; transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-right: 1px solid var(--border); padding: 40px 30px; }
+        .sidebar.active { left: 0; }
+        .side-link { display: block; padding: 18px 0; border-bottom: 1px solid var(--grey); text-decoration: none; color: var(--text); font-size: 0.95rem; cursor: pointer; transition: 0.2s; }
+        .side-link:hover { color: var(--gold); padding-left: 8px; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 4000; display: none; }
+        .overlay.active { display: block; }
+
+        header { padding: 20px 5%; background: white; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 2000; }
+        .logo { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; letter-spacing: 4px; font-weight: 600; text-transform: uppercase; cursor: pointer; }
+
+        /* --- SHEET SYSTEM --- */
+        .sheet { display: none; min-height: 100vh; padding-bottom: 100px; animation: slideIn 0.4s ease; }
+        .sheet.active { display: block; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- MODERATE UPLOAD MODULE --- */
+        .upload-container { display: flex; flex-wrap: wrap; gap: 30px; padding: 40px 5%; align-items: flex-start; }
+        /* Downsized Preview Box */
+        .upload-visual { flex: 1; min-width: 300px; max-width: 450px; background: var(--grey); border: 1px solid var(--border); padding: 20px; text-align: center; border-radius: 4px; }
+        .upload-visual img { width: 100%; max-height: 350px; object-fit: contain; box-shadow: 0 10px 20px rgba(0,0,0,0.05); display: none; }
+        .upload-form { flex: 1.5; min-width: 320px; }
+        
+        .input-box { margin-bottom: 20px; }
+        .input-box label { display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; color: #888; }
+        input, textarea, select { width: 100%; padding: 16px; border: 1px solid var(--border); font-family: inherit; font-size: 0.95rem; outline: none; }
+        input:focus { border-color: var(--gold); }
+        
+        .btn { width: 100%; padding: 20px; border: none; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 0.8rem; }
+        .btn-black { background: black; color: white; }
+        .btn-black:disabled { background: #eee; color: #aaa; cursor: not-allowed; }
+
+        /* --- MESSAGE SLIPS --- */
+        .thread { padding: 20px; border: 1px solid var(--border); margin-bottom: 12px; display: flex; align-items: center; cursor: pointer; background: white; transition: 0.2s; }
+        .thread:hover { border-color: var(--gold); }
+        .dot { width: 10px; height: 10px; background: var(--gold); border-radius: 50%; margin-right: 15px; }
+
+        /* --- GALLERY GRID (ARTSY STYLE) --- */
+        .art-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; padding: 20px 5%; }
+        .art-card { position: relative; cursor: pointer; }
+        .art-card img { width: 100%; height: 320px; object-fit: cover; }
+        .art-card-info { padding: 12px 0; }
+        .art-card-title { font-family: 'Cormorant Garamond'; font-size: 1.2rem; font-weight: 600; }
+        .art-card-price { color: var(--gold); font-size: 0.85rem; margin-top: 4px; }
+
+        /* --- NAVIGATION --- */
+        nav { position: fixed; bottom: 0; width: 100%; background: white; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 15px 0; z-index: 3000; }
+        .nav-link { font-size: 0.6rem; color: #999; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; }
+        .nav-link.active { color: var(--gold); font-weight: 600; }
+
+        /* --- CHAT OVERLAY --- */
+        .chat-full { position: fixed; inset: 0; background: white; z-index: 6000; display: none; flex-direction: column; }
+        .chat-top { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+        .chat-msgs { flex: 1; padding: 20px; background: #fafafa; overflow-y: auto; display: flex; flex-direction: column; }
+        .msg-bubble { padding: 12px 16px; border-radius: 15px; margin-bottom: 10px; max-width: 80%; font-size: 0.9rem; }
+        .msg-me { background: black; color: white; align-self: flex-end; }
+        .msg-them { background: white; border: 1px solid var(--border); align-self: flex-start; }
+    </style>
+</head>
+<body onload="initDB()">
+
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <h2 style="font-family: 'Cormorant Garamond'; margin-bottom: 30px;">DREAME Account</h2>
+        <div class="side-link" onclick="navigate('sheet-home')">Home</div>
+        <div class="side-link" onclick="navigate('sheet-messages')">Messages</div>
+        <div class="side-link" onclick="navigate('sheet-favorites')">My Favorites</div>
+        <div class="side-link" onclick="navigate('sheet-sales')">My Sales</div>
+        <div class="side-link" onclick="navigate('sheet-exhibitions')">Exhibitions</div>
+        <div class="side-link" onclick="navigate('sheet-pro')">Pro Website</div>
+        <div class="side-link" onclick="navigate('sheet-settings')">Settings</div>
+        <div class="side-link" style="margin-top: 40px; color: #ccc;" onclick="location.reload()">Sign Out</div>
+    </div>
+
+    <header>
+        <div onclick="toggleMenu()" style="cursor:pointer; font-size: 1.4rem;">☰</div>
+        <div class="logo" onclick="navigate('sheet-home')">DREAME<span>.</span></div>
+        <div id="auth-tag" style="font-size: 0.6rem; border:1px solid #000; padding: 4px 10px; cursor:pointer;" onclick="simLogin()">LOGIN</div>
+    </header>
+
+    <div id="sheet-home" class="sheet active">
+        <div style="padding: 20px 5%;">
+            <input type="text" placeholder="Search Artists or Works..." style="width:100%; padding:15px; border:1px solid #eee;" onkeyup="filterGallery(this.value)">
+        </div>
+        <div class="art-grid" id="main-gallery"></div>
+    </div>
+
+    <div id="sheet-upload" class="sheet">
+        <div class="upload-container">
+            <div class="upload-visual">
+                <p id="up-prompt" style="font-size:0.8rem; color:#aaa;">Medium Preview Area</p>
+                <img id="up-preview">
+                <div id="up-sync-data" style="margin-top:20px; text-align:left;">
+                    <h3 id="sync-title" style="font-family:'Cormorant Garamond';"></h3>
+                    <p id="sync-desc" style="font-size:0.75rem; color:#666; margin-top:10px;"></p>
+                </div>
+            </div>
+            
+            <div class="upload-form">
+                <h2 style="font-family: 'Cormorant Garamond'; margin-bottom: 25px;">Professional Listing</h2>
+                <div class="input-box">
+                    <label>Select Work (Up to 25MB)*</label>
+                    <input type="file" accept="image/*" onchange="processFile(event)">
+                </div>
+                <div class="input-box">
+                    <label>Artwork Title*</label>
+                    <input type="text" id="in-title" placeholder="Title" oninput="syncFields()">
+                </div>
+                <div class="input-box">
+                    <label>Description / Story*</label>
+                    <textarea id="in-desc" rows="5" placeholder="The inspiration behind this piece..." oninput="syncFields()"></textarea>
+                </div>
+                <div class="input-box">
+                    <label>Price (USD)*</label>
+                    <input type="number" id="in-price" placeholder="0.00" oninput="syncFields()">
+                </div>
+                <button class="btn btn-black" id="pub-btn" disabled onclick="saveToDB()">Post to Gallery</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sheet-messages" class="sheet">
+        <div style="padding: 40px 5%;">
+            <h2 style="font-family: 'Cormorant Garamond'; margin-bottom: 30px; font-size: 2rem;">Inquiry Slips</h2>
+            <div id="message-list">
+                <div class="thread" onclick="openThread('Julian R. (Collector)')">
+                    <div class="dot"></div>
+                    <div>
+                        <strong>Julian R.</strong>
+                        <p style="font-size:0.8rem; color:#888;">Is "The New Vanguard" available for shipping to Lagos?</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sheet-favorites" class="sheet"><div style="padding:100px; text-align:center;"><h3>My Favorites</h3><p>You haven't liked any works yet.</p></div></div>
+    <div id="sheet-sales" class="sheet"><div style="padding:100px; text-align:center;"><h3>Sales Dashboard</h3><p>Active sales will appear here.</p></div></div>
+    <div id="sheet-exhibitions" class="sheet"><div style="padding:100px; text-align:center;"><h3>Exhibitions</h3><p>No current private views.</p></div></div>
+    <div id="sheet-pro" class="sheet"><div style="padding:100px; text-align:center;"><h3>Pro Website Builder</h3><p>Syncing with domain...</p></div></div>
+    <div id="sheet-settings" class="sheet"><div style="padding:100px; text-align:center;"><h3>Account Settings</h3><p>Security and Profile data.</p></div></div>
+
+    <div id="chat-ui" class="chat-full">
+        <div class="chat-top">
+            <span onclick="closeThread()" style="cursor:pointer; font-weight:600;">← Back</span>
+            <strong id="chat-name">Buyer</strong>
+            <span></span>
+        </div>
+        <div class="chat-msgs" id="msg-box">
+            <div class="msg-bubble msg-them">Hello! I love this piece. What is the medium?</div>
+        </div>
+        <div style="padding:20px; border-top:1px solid #eee; display:flex; gap:10px;">
+            <input type="text" id="msg-input" placeholder="Type your response..." style="flex:1;">
+            <button class="btn btn-black" style="width:100px; padding:10px;" onclick="sendReply()">Send</button>
+        </div>
+    </div>
+
+    <nav>
+        <div class="nav-link active" onclick="navigate('sheet-home', this)">Explore</div>
+        <div class="nav-link" onclick="navigate('sheet-upload', this)">Upload</div>
+        <div class="nav-link" onclick="navigate('sheet-messages', this)">Messages</div>
+    </nav>
+
+    <script>
+        let db;
+        let currentFile = "";
+
+        // --- DATABASE SETUP (INDEXEDDB FOR 5MB+ FILES) ---
+        function initDB() {
+            const req = indexedDB.open("DreamePro_v2", 1);
+            req.onupgradeneeded = (e) => {
+                db = e.target.result;
+                db.createObjectStore("gallery", { keyPath: "id" });
+            };
+            req.onsuccess = (e) => { 
+                db = e.target.result; 
+                renderGallery(); 
+            };
+        }
+
+        function toggleMenu() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        function navigate(id, el) {
+            document.querySelectorAll('.sheet').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(el && el.classList.contains('nav-link')) {
+                document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+                el.classList.add('active');
+            }
+            toggleMenu();
+            window.scrollTo(0,0);
+        }
+
+        // --- UPLOAD LOGIC ---
+        function processFile(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentFile = ev.target.result;
+                const img = document.getElementById('up-preview');
+                img.src = currentFile;
+                img.style.display = 'block';
+                document.getElementById('up-prompt').style.display = 'none';
+                syncFields();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function syncFields() {
+            const title = document.getElementById('in-title').value;
+            const desc = document.getElementById('in-desc').value;
+            const price = document.getElementById('in-price').value;
+            
+            document.getElementById('sync-title').innerText = title;
+            document.getElementById('sync-desc').innerText = desc;
+            
+            const btn = document.getElementById('pub-btn');
+            btn.disabled = !(title && desc && price && currentFile);
+        }
+
+        function saveToDB() {
+            const entry = {
+                id: Date.now(),
+                title: document.getElementById('in-title').value,
+                desc: document.getElementById('in-desc').value,
+                price: document.getElementById('in-price').value,
+                img: currentFile
+            };
+            const tx = db.transaction("gallery", "readwrite");
+            tx.objectStore("gallery").add(entry);
+            tx.oncomplete = () => {
+                alert("Published Successfully!");
+                location.reload();
+            };
+        }
+
+        // --- GALLERY ---
+        function renderGallery() {
+            const grid = document.getElementById('main-gallery');
+            grid.innerHTML = "";
+            const store = db.transaction("gallery").objectStore("gallery");
+            store.openCursor().onsuccess = (e) => {
+                const cursor = e.target.result;
+                if(cursor) {
+                    const item = cursor.value;
+                    grid.innerHTML += `
+                        <div class="art-card" onclick="alert('Viewing: ${item.title}')">
+                            <img src="${item.img}">
+                            <div class="art-card-info">
+                                <div class="art-card-title">${item.title}</div>
+                                <div class="art-card-price">$${item.price}</div>
+                            </div>
+                        </div>
+                    `;
+                    cursor.continue();
+                }
+            };
+        }
+
+        // --- CHAT SYSTEM ---
+        function openThread(name) {
+            document.getElementById('chat-name').innerText = name;
+            document.getElementById('chat-ui').style.display = 'flex';
+        }
+        function closeThread() { document.getElementById('chat-ui').style.display = 'none'; }
+        function sendReply() {
+            const val = document.getElementById('msg-input').value;
+            if(!val) return;
+            const box = document.getElementById('msg-box');
+            box.innerHTML += `<div class="msg-bubble msg-me">${val}</div>`;
+            document.getElementById('msg-input').value = "";
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function simLogin() {
+            const name = prompt("Enter your Gmail/Account name to verify:");
+            if(name) {
+                document.getElementById('auth-tag').innerText = name.toUpperCase();
+                alert("Verified via Google Services.");
+            }
+        }
+    </script>
+</body>
+</html>
